@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FSH — Virtual fitting room for fashion stores
 
-## Getting Started
+Hackathon project for the **YouCam API Skin AI & eCommerce VTO Hackathon**.
 
-First, run the development server:
+FSH is a merchant-facing platform that lets small fashion stores add **virtual try-on** and **outfit guidance** with a single embed script. Shoppers upload a photo; the app calls **YouCam AI Clothes Virtual Try-On** (`cloth-v4`) server-side and shows styling picks from the store catalog.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Stack
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Next.js (App Router), TypeScript, Tailwind CSS
+- YouCam REST API (Bearer auth, file upload + async task polling)
+- No generic “AI SaaS” UI — editorial typography and neutral palette
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Copy `.env.example` to `.env.local` and set:
 
-## Learn More
+   ```bash
+   YOUCAM_API_KEY=your_key_from_api_console
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. Install and run:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. Open:
 
-## Deploy on Vercel
+   - [http://localhost:3000](http://localhost:3000) — product landing
+   - [http://localhost:3000/dashboard](http://localhost:3000/dashboard) — embed snippet
+   - [http://localhost:3000/stores/demo](http://localhost:3000/stores/demo) — demo storefront
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## YouCam integration
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Step | Route / module |
+|------|----------------|
+| Upload shopper photo | `POST /api/youcam/upload` → `uploadClothImage` (add `?purpose=analysis` for skin tone file id) |
+| Start try-on | `POST /api/youcam/try-on` → `createClothTryOnTask` |
+| Poll try-on | `GET /api/youcam/task/[taskId]` |
+| Skin tone after fitting | `POST /api/youcam/skin-tone` → `createSkinToneAnalysisTask`, poll `GET /api/youcam/skin-tone/[taskId]` |
+
+API key never ships to the browser.
+
+## Embed
+
+Merchants paste the snippet from `/dashboard`. `public/embed.js` injects a button that opens `/widget` in a modal iframe.
+
+## Demo video checklist
+
+1. Merchant dashboard → copy embed
+2. Demo store → product → upload photo → try-on result
+3. Styling assistant recommendations
+4. Name the API: **AI Clothes Virtual Try-On (YouCam API)**
+
+## License
+
+MIT (adjust for submission if needed).

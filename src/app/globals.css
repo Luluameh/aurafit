@@ -1,26 +1,307 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas: #f6f5f2;
+  --surface: #ffffff;
+  --noir: #161513;
+  --charcoal: #2a2826;
+  --stone: #6f6a63;
+  --mist: #eceae4;
+  --hairline: #e2dfd8;
+  --champagne: #8a5a32;
+  --champagne-soft: #f3ebe3;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-noir: var(--noir);
+  --color-charcoal: var(--charcoal);
+  --color-stone: var(--stone);
+  --color-mist: var(--mist);
+  --color-hairline: var(--hairline);
+  --color-champagne: var(--champagne);
+  --color-champagne-soft: var(--champagne-soft);
+  --font-display: var(--font-bodoni);
+  --font-body: var(--font-manrope);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--noir);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  overflow-x: clip;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+::selection {
+  background: color-mix(in srgb, var(--champagne) 22%, white);
+}
+
+.font-display {
+  font-family: var(--font-bodoni), Georgia, serif;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fsh-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fsh-intro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fsh-modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 1s ease both;
+}
+
+.fsh-ease {
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fsh-page-shell {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fsh-page-shell--ready {
+  opacity: 1;
+  transform: none;
+}
+
+.fsh-stagger > * {
+  animation: fsh-fade-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fsh-stagger > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.fsh-stagger > *:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.fsh-stagger > *:nth-child(3) {
+  animation-delay: 0.19s;
+}
+.fsh-stagger > *:nth-child(4) {
+  animation-delay: 0.26s;
+}
+.fsh-stagger > *:nth-child(5) {
+  animation-delay: 0.33s;
+}
+.fsh-stagger > *:nth-child(6) {
+  animation-delay: 0.4s;
+}
+
+.fsh-reveal {
+  animation: fsh-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fsh-grid-swap {
+  animation: fsh-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fsh-link {
+  transition:
+    color 0.25s ease,
+    opacity 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fsh-link:active {
+  transform: translateY(1px);
+}
+
+.fsh-btn {
+  transition:
+    background-color 0.28s ease,
+    color 0.28s ease,
+    border-color 0.28s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease;
+}
+
+.fsh-btn:hover {
+  transform: translateY(-1px);
+}
+
+.fsh-btn:active {
+  transform: translateY(0);
+}
+
+.fsh-overlay {
+  animation: fsh-fade-up 0.35s ease both;
+}
+
+.fsh-modal-overlay {
+  animation: fsh-fade-up 0.32s ease both;
+}
+
+.fsh-modal-panel {
+  animation: fsh-modal-panel-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fsh-crossfade {
+  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fsh-tab {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.2s ease;
+}
+
+.fsh-intro-rise {
+  animation: fsh-intro-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fsh-intro-rise--1 {
+  animation-delay: 0.05s;
+}
+.fsh-intro-rise--2 {
+  animation-delay: 0.18s;
+}
+.fsh-intro-rise--3 {
+  animation-delay: 0.3s;
+}
+.fsh-intro-rise--4 {
+  animation-delay: 0.42s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .fsh-stagger > *,
+  .fsh-reveal,
+  .fsh-grid-swap,
+  .fsh-intro-rise,
+  .fsh-modal-overlay,
+  .fsh-modal-panel,
+  .fsh-overlay,
+  .fsh-page-shell {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .fsh-crossfade {
+    transition: none;
+  }
+
+  .fsh-btn:hover,
+  .fsh-link:active {
+    transform: none;
+  }
+}
+
+.fsh-intro-active {
+  overflow: hidden;
+}
+
+.fsh-intro-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--canvas);
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: all;
+}
+
+.fsh-intro-screen--exit {
+  opacity: 0;
+  transform: scale(1.02);
+  pointer-events: none;
+}
+
+.fsh-intro-screen__grain {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: radial-gradient(circle at 20% 20%, #fff 0%, transparent 45%),
+    radial-gradient(circle at 80% 70%, color-mix(in srgb, var(--champagne) 18%, white) 0%, transparent 50%);
+}
+
+.fsh-intro-screen__bar {
+  width: min(12rem, 40vw);
+  height: 1px;
+  background: var(--hairline);
+  position: relative;
+  overflow: hidden;
+}
+
+.fsh-intro-screen__bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--noir);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: fsh-intro-bar 2.2s ease-in-out forwards;
+}
+
+@keyframes fsh-intro-bar {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.catalog-code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--stone);
 }
