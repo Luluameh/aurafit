@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         headers: {
           "Content-Type": "image/jpeg",
           "Cache-Control": "no-store",
-          "X-FSH-Background": "removed",
+          "X-AuraFit-Background": "removed",
         },
       });
     } catch (error) {
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         headers: {
           "Content-Type": file.type || "application/octet-stream",
           "Cache-Control": "no-store",
-          "X-FSH-Background": "original",
+          "X-AuraFit-Background": "original",
         },
       });
     }

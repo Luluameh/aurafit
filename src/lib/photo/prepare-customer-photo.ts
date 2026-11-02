@@ -16,7 +16,7 @@ export async function prepareCustomerPhoto(file: File): Promise<{
 
   if (!response.ok) return { file, backgroundRemoved: false };
 
-  const removed = response.headers.get("X-FSH-Background") === "removed";
+  const removed = response.headers.get("X-AuraFit-Background") === "removed";
   if (!removed) return { file, backgroundRemoved: false };
 
   const blob = await response.blob();

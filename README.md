@@ -1,8 +1,8 @@
-# FSH — Virtual fitting room for fashion stores
+# AuraFit — Virtual fitting room for fashion stores
 
 Hackathon project for the **YouCam API Skin AI & eCommerce VTO Hackathon**.
 
-FSH is a merchant-facing platform that lets small fashion stores add **virtual try-on** and **outfit guidance** with a single embed script. Shoppers upload a photo; the app calls **YouCam AI Clothes Virtual Try-On** (`cloth-v4`) server-side and shows styling picks from the store catalog.
+AuraFit is a merchant-facing platform that lets small fashion stores add **virtual try-on** and **outfit guidance** with a single embed script. Shoppers upload a photo; the app calls **YouCam AI Clothes Virtual Try-On** (`cloth-v4`) server-side and shows styling picks from the store catalog.
 
 ## Stack
 
