@@ -10,6 +10,8 @@
   --hairline: #e2dfd8;
   --champagne: #8a5a32;
   --champagne-soft: #f3ebe3;
+  --gold: #8f6e32;
+  --gold-line: #c6a15e;
 }
 
 @theme inline {
@@ -22,8 +24,15 @@
   --color-hairline: var(--hairline);
   --color-champagne: var(--champagne);
   --color-champagne-soft: var(--champagne-soft);
+  --color-gold: var(--gold);
+  --color-gold-line: var(--gold-line);
   --font-display: var(--font-bodoni);
   --font-body: var(--font-manrope);
+}
+
+html {
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 body {
@@ -242,7 +251,8 @@ body {
   .fsh-grid-swap,
   .fsh-intro-rise,
   .fsh-text-rise,
-  .fsh-intro-word span,
+  .fsh-intro-logo,
+  .fsh-click-cue,
   .fsh-modal-overlay,
   .fsh-modal-panel,
   .fsh-overlay,
@@ -294,32 +304,77 @@ body {
   position: absolute;
   top: 42%;
   left: 50%;
-  width: min(320px, 62vw);
-  height: min(420px, 54vh);
+  width: min(340px, 68vw);
+  height: min(460px, 58vh);
   transform: translate(-50%, -50%);
   overflow: hidden;
   background: transparent;
   border: 0;
+  -webkit-mask-image: radial-gradient(
+    ellipse 56% 52% at 50% 48%,
+    #000 0%,
+    rgba(0, 0, 0, 0.72) 36%,
+    rgba(0, 0, 0, 0.28) 58%,
+    transparent 76%
+  );
+  mask-image: radial-gradient(
+    ellipse 56% 52% at 50% 48%,
+    #000 0%,
+    rgba(0, 0, 0, 0.72) 36%,
+    rgba(0, 0, 0, 0.28) 58%,
+    transparent 76%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
 }
 
-.fsh-intro-frame::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  z-index: 3;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 34%, #0c0c0c 68%);
+.fsh-click-cue {
+  animation: fsh-click-cue 1.15s ease-in-out infinite;
+}
+
+@keyframes fsh-click-cue {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(3px, 4px);
+  }
 }
 
 .fsh-intro-frame__photo,
 .fsh-intro-frame__close {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: 100%;
+  height: 168%;
   object-fit: cover;
+  object-position: center 18%;
   transform: translateY(-100%);
   transition: transform 1.15s cubic-bezier(0.77, 0, 0.18, 1);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 62%,
+    rgba(0, 0, 0, 0.45) 78%,
+    rgba(0, 0, 0, 0.12) 90%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 62%,
+    rgba(0, 0, 0, 0.45) 78%,
+    rgba(0, 0, 0, 0.12) 90%,
+    transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
 }
 
 .fsh-intro-frame__photo.is-in,
@@ -351,7 +406,13 @@ body {
   padding: 1.25rem 1.25rem 1.75rem;
 }
 
-.fsh-intro-word,
+.fsh-intro-logo {
+  display: block;
+  height: clamp(4.2rem, 12vw, 6.4rem);
+  width: auto;
+  animation: fsh-word-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .fsh-intro-percent {
   margin: 0;
   font-family: var(--font-bodoni), Georgia, serif;
@@ -359,11 +420,6 @@ body {
   line-height: 0.9;
   letter-spacing: -0.03em;
   color: #fff;
-}
-
-.fsh-intro-word span {
-  display: inline-block;
-  animation: fsh-word-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .fsh-intro-percent {

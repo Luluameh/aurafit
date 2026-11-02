@@ -19,7 +19,7 @@ export function EmbedSnippet({ storeId }: EmbedSnippetProps) {
   }, []);
 
   const snippet = useMemo(
-    () => `<!-- FSH virtual fitting room -->
+    () => `<!-- AuraFit virtual fitting room -->
 <script
   src="${base}/embed.js"
   data-store="${storeId}"

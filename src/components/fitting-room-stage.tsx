@@ -12,8 +12,8 @@ const ClothStudio = dynamic(
 export function FittingRoomStage() {
   return (
     <section className="border-y border-hairline bg-white">
-      <div className="grid lg:grid-cols-[1.35fr_0.65fr]">
-        <div className="relative min-h-[55vh] sm:min-h-[65vh] lg:min-h-[72vh]">
+      <div className="grid min-w-0 lg:grid-cols-[1.35fr_0.65fr]">
+        <div className="relative min-h-[55vh] min-w-0 overflow-hidden sm:min-h-[65vh] lg:min-h-[72vh]">
           <video
             className="absolute inset-0 h-full w-full object-cover"
             autoPlay
@@ -25,7 +25,7 @@ export function FittingRoomStage() {
           />
           <ClothStudio />
         </div>
-        <div className="flex flex-col justify-center px-4 py-10 sm:px-6 sm:py-14 lg:px-12">
+        <div className="flex min-w-0 flex-col justify-center px-4 py-10 sm:px-6 sm:py-14 lg:px-12">
           <p className="text-[10px] uppercase tracking-[0.18em] text-stone sm:text-[11px] sm:tracking-[0.22em]">
             In the studio
           </p>

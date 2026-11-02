@@ -14,8 +14,6 @@ const SLIDE_MS = 1100;
 const STEPS = PHOTOS.length + 1;
 const END_MS = START_MS + (STEPS - 1) * STEP_MS + SLIDE_MS;
 
-const WORD = "FSH";
-
 type SiteIntroGateProps = {
   children: React.ReactNode;
 };
@@ -85,13 +83,7 @@ export function SiteIntroGate({ children }: SiteIntroGateProps) {
             <div className={`fsh-intro-frame__close ${PHOTOS.length < shown ? "is-in" : ""}`} />
           </div>
           <div className="fsh-intro-meta">
-            <p className="fsh-intro-word">
-              {WORD.split("").map((letter, index) => (
-                <span key={letter} style={{ animationDelay: `${0.12 + index * 0.08}s` }}>
-                  {letter}
-                </span>
-              ))}
-            </p>
+            <img src="/brand/aurafit.png" alt="AuraFit" className="fsh-intro-logo" />
             <p className="fsh-intro-percent">{progress}%</p>
           </div>
         </div>

@@ -30,7 +30,7 @@ export function ProductPageView({ product, storeSlug }: ProductPageViewProps) {
           ← Shop
         </Link>
         <div className="mt-5">
-          <TryOnPanel product={product} storeSlug={storeSlug} />
+          <TryOnPanel product={product} storeSlug={storeSlug} guide={storeSlug === "demo"} />
         </div>
       </div>
     );

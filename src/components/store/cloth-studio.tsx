@@ -84,9 +84,10 @@ function Rail() {
 
 export function ClothStudio() {
   return (
-    <Canvas
-      className="absolute inset-0"
-      camera={{ position: [0, 0.05, 4.15], fov: 34 }}
+    <div className="absolute inset-0">
+      <Canvas
+        className="h-full w-full"
+        camera={{ position: [0, 0.05, 4.15], fov: 34 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, alpha: true }}
       onCreated={({ gl, scene }) => {
@@ -107,5 +108,6 @@ export function ClothStudio() {
       <CurtainPanel side={1} />
       <Rail />
     </Canvas>
+    </div>
   );
 }

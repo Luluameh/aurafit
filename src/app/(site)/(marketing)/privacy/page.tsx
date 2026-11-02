@@ -4,14 +4,14 @@ import { POLICY_UPDATED, privacyPolicy } from "@/lib/legal/policies";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy — FSH",
-  description: "How FSH handles a photo you upload for a virtual fitting.",
+  title: "Privacy",
+  description: "How AuraFit handles a photo you upload for a virtual fitting.",
 };
 
 export default function PrivacyPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-      <p className="catalog-code">FSH</p>
+      <p className="catalog-code">AuraFit</p>
       <TextTransition
         as="h1"
         text="Privacy"

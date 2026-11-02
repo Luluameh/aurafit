@@ -1,5 +1,6 @@
 "use client";
 
+import { DemoJoyride } from "@/components/demo-joyride";
 import { PhotoDisclaimerModal } from "@/components/photo-disclaimer-modal";
 import { SuggestionsModal } from "@/components/suggestions-modal";
 import { TextTransition } from "@/components/text-transition";
@@ -55,6 +56,7 @@ type TryOnPanelProps = {
   storeSlug?: string;
   catalog?: Product[];
   brandName?: string;
+  guide?: boolean;
 };
 
 async function pollTask(
@@ -109,6 +111,7 @@ export function TryOnPanel({
   storeSlug = "demo",
   catalog,
   brandName,
+  guide = false,
 }: TryOnPanelProps) {
   const brand = brandName ?? brandFromStore(storeSlug);
   const [step, setStep] = useState<Step>("setup");
@@ -529,6 +532,7 @@ export function TryOnPanel({
 
   return (
     <div>
+      <DemoJoyride active={guide} />
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="min-w-0">
           <TextTransition
@@ -548,6 +552,7 @@ export function TryOnPanel({
           aria-expanded={mannequinOpen}
           aria-haspopup="listbox"
           onClick={() => setMannequinOpen((open) => !open)}
+          data-tour="mannequin"
           className="fsh-btn border border-hairline bg-white px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-noir disabled:opacity-40"
         >
           Mannequin try
@@ -556,12 +561,12 @@ export function TryOnPanel({
           <div
             role="listbox"
             aria-label="Choose a mannequin"
-            className="absolute left-0 z-30 mt-2 w-[min(100vw-2rem,28rem)] border border-hairline bg-white p-3 shadow-[0_16px_40px_rgba(22,21,19,0.08)]"
+            className="absolute left-0 z-30 mt-2 w-full max-w-md border border-hairline bg-white p-3 shadow-[0_16px_40px_rgba(22,21,19,0.08)]"
           >
             <p className="px-1 text-sm leading-relaxed text-stone">
               No photo needed. Pick a form and this piece is placed on it.
             </p>
-            <div className="mt-3 grid grid-cols-4 gap-2">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {MANNEQUINS.map((figure) => (
                 <button
                   key={figure.id}
@@ -575,7 +580,7 @@ export function TryOnPanel({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={figure.src} alt="" className="h-full w-full object-contain" />
                   </span>
-                  <span className="mt-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-noir">
+                  <span className="mt-2 block text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] text-noir sm:text-[11px]">
                     {figure.name}
                   </span>
                 </button>
@@ -586,7 +591,7 @@ export function TryOnPanel({
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="relative aspect-[3/4] overflow-hidden bg-[#eceae6]">
+        <div data-tour="photo" className="relative aspect-[3/4] overflow-hidden bg-[#eceae6]">
           <input
             ref={(node) => {
               pickers.current.main = node;
@@ -627,17 +632,29 @@ export function TryOnPanel({
               type="button"
               disabled={step === "processing"}
               onClick={() => requestPhoto(lookView === "Back" && hasStoreBack ? "pair" : "main")}
-              className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center"
+              className="absolute inset-0 flex cursor-pointer flex-col items-center justify-center px-8 text-center"
             >
               <span className="font-display text-4xl text-noir">You</span>
-              <span className="mt-3 max-w-xs text-sm leading-relaxed text-stone">
+              <span className="mt-4 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-noir">
+                <svg
+                  className="fsh-click-cue"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  aria-hidden="true"
+                >
+                  <path d="M2 1.5 2 12.2 5.1 9.4 7.4 14.2 9.2 13.4 6.9 8.6 11 8.6Z" fill="currentColor" />
+                </svg>
+                Click here
+              </span>
+              <span className="mt-2 max-w-xs text-sm leading-relaxed text-stone">
                 {lookView === "Back" && hasStoreBack
                   ? "Add a photo with your back to the camera."
                   : photoPrompt(product.photoGuide)}
               </span>
             </button>
           )}
-          <span className="pointer-events-none absolute left-4 top-4 z-10 bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-noir">
+          <span className="pointer-events-none absolute left-2 top-2 z-10 bg-white px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-noir sm:left-4 sm:top-4 sm:text-[10px] sm:tracking-[0.16em]">
             {figureName ?? "You"}
           </span>
           {shown && (
@@ -645,7 +662,7 @@ export function TryOnPanel({
               type="button"
               disabled={step === "processing"}
               onClick={() => requestPhoto(lookView === "Back" && hasStoreBack ? "pair" : "main")}
-              className="fsh-btn absolute right-4 top-4 z-10 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-noir disabled:opacity-40"
+              className="fsh-btn absolute right-2 top-2 z-10 max-w-[46%] bg-white px-2 py-2 text-[9px] font-semibold uppercase leading-tight tracking-[0.08em] text-noir disabled:opacity-40 sm:right-4 sm:top-4 sm:px-3 sm:text-[10px] sm:tracking-[0.12em]"
             >
               {figureName ? "Your photo" : "Different photo"}
             </button>

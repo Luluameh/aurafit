@@ -7,9 +7,9 @@ export const POLICY_UPDATED = "2 November 2026";
 
 export const termsPolicy: PolicyBlock[] = [
   {
-    heading: "What FSH is",
+    heading: "What AuraFit is",
     paragraphs: [
-      "FSH is a virtual fitting room. A shop can place it on a product page so you can preview a piece on a photo you choose to upload.",
+      "AuraFit is a virtual fitting room. A shop can place it on a product page so you can preview a piece on a photo you choose to upload.",
       "The preview is a picture, not a fitting appointment. It does not measure you, reserve stock, or complete a purchase.",
     ],
   },
@@ -31,7 +31,7 @@ export const termsPolicy: PolicyBlock[] = [
     heading: "Your part",
     paragraphs: [
       "Upload a photo only if you are the person in it, or you have their permission. Do not upload a photo of someone else to try clothes on them.",
-      "The sample shop Atelier North is a demonstration catalog. Shipping, returns, and checkout, when a real shop uses FSH, belong to that shop.",
+      "The sample shop Atelier North is a demonstration catalog. Shipping, returns, and checkout, when a real shop uses AuraFit, belong to that shop.",
     ],
   },
 ];
@@ -49,7 +49,7 @@ export const privacyPolicy: PolicyBlock[] = [
     heading: "Who handles the fitting",
     paragraphs: [
       "Try-on and skin-tone analysis are performed through YouCam’s API. Your photo is uploaded there for that task.",
-      "FSH does not sell your photo, and the shop does not receive it as a marketing asset.",
+      "AuraFit does not sell your photo, and the shop does not receive it as a marketing asset.",
     ],
   },
   {

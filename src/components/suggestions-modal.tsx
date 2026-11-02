@@ -39,26 +39,32 @@ export function SuggestionsModal({
   const [budget] = useState(800);
   const [swaps, setSwaps] = useState<Record<string, string>>({});
   const [outfit, setOutfit] = useState<CoordinatedOutfit | null>(null);
+  const [outfitReady, setOutfitReady] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    setOutfitReady(false);
     async function loadOutfit() {
-      const res = await fetch("/api/stylist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: anchor.id,
-          product: anchor,
-          catalog,
-          occasion,
-          budget,
-          swaps,
-        }),
-      });
-      if (!res.ok || cancelled) return;
-      const data = (await res.json()) as { outfit?: CoordinatedOutfit };
-      if (data.outfit) setOutfit(data.outfit);
+      try {
+        const res = await fetch("/api/stylist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productId: anchor.id,
+            product: anchor,
+            catalog,
+            occasion,
+            budget,
+            swaps,
+          }),
+        });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { outfit?: CoordinatedOutfit };
+        if (data.outfit) setOutfit(data.outfit);
+      } finally {
+        if (!cancelled) setOutfitReady(true);
+      }
     }
     void loadOutfit();
     return () => {
@@ -134,12 +140,12 @@ export function SuggestionsModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="suggestions-title"
-        className="fsh-modal-panel relative max-h-[min(72vh,640px)] w-full max-w-lg overflow-y-auto bg-canvas p-5 shadow-xl sm:p-6"
+        className="fsh-modal-panel relative max-h-[min(92dvh,720px)] w-full max-w-lg overflow-y-auto bg-canvas p-4 shadow-xl sm:p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="catalog-code">With this piece</p>
-            <h2 id="suggestions-title" className="mt-1 font-display text-2xl text-noir sm:text-3xl">
+            <h2 id="suggestions-title" className="mt-1 break-words font-display text-xl text-noir sm:text-3xl">
               {anchor.name}
             </h2>
           </div>
@@ -172,6 +178,11 @@ export function SuggestionsModal({
           ))}
         </div>
 
+        {picks.length === 0 && outfitReady && (
+          <p className="mt-8 text-sm leading-relaxed text-noir">No suggestion available for this.</p>
+        )}
+
+        {picks.length > 0 && (
         <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
           {picks.map((item) => (
             <button
@@ -203,9 +214,6 @@ export function SuggestionsModal({
             </button>
           ))}
         </div>
-
-        {picks.length === 0 && (
-          <p className="mt-6 text-sm leading-relaxed text-stone">{outfit?.note}</p>
         )}
 
         {answer && <p className="mt-4 text-sm leading-relaxed text-noir">{answer.reply}</p>}

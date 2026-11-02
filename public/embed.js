@@ -165,7 +165,7 @@
 
     var frame = document.createElement("iframe");
     frame.src = widgetUrl;
-    frame.title = "FSH virtual fitting room";
+    frame.title = "AuraFit virtual fitting room";
     frame.style.cssText =
       "width:min(1100px,100%);height:min(860px,92vh);border:0;background:#f6f5f2;";
     frame.setAttribute("allow", "camera");

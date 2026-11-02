@@ -63,7 +63,7 @@ export default function WidgetPage() {
         <h1 className="font-display text-3xl text-noir">No product photo on this page</h1>
         <p className="mt-3 max-w-md text-sm leading-relaxed text-stone">
           The fitting room reads a public product image from this page. Add a schema.org
-          Product image, an Open Graph image, or data-image on the FSH script.
+          Product image, an Open Graph image, or data-image on the AuraFit script.
         </p>
       </div>
     );
@@ -77,7 +77,7 @@ export default function WidgetPage() {
     <div className="min-h-screen bg-canvas p-3 sm:p-4 md:p-6">
       <header className="mb-4 border-b border-hairline pb-3 sm:mb-6 sm:pb-4">
         <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-stone sm:text-[10px] sm:tracking-[0.2em]">
-          FSH · fitting room
+          AuraFit · fitting room
         </p>
         <h1 className="mt-1 font-display text-xl text-noir sm:text-2xl">{pageProduct.name}</h1>
       </header>

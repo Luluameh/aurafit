@@ -98,7 +98,7 @@ export function ProductCard({ product, storeSlug }: ProductCardProps) {
         </span>
       </div>
       <Link href={href} className="mt-3 block px-0.5">
-        <p className="text-sm text-noir">{product.name}</p>
+        <p className="break-words text-sm text-noir">{product.name}</p>
         <p className="mt-1 text-sm text-stone">${product.price}</p>
       </Link>
     </article>

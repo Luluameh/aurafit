@@ -16,9 +16,23 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "FSH — Virtual fitting room for fashion stores",
+  title: {
+    default: "AuraFit — Virtual fitting room for fashion stores",
+    template: "%s — AuraFit",
+  },
+  applicationName: "AuraFit",
   description:
     "Add YouCam-powered virtual try-on and outfit suggestions to any online fashion store with one embed.",
+  openGraph: {
+    title: "AuraFit — Virtual fitting room for fashion stores",
+    description:
+      "Add YouCam-powered virtual try-on and outfit suggestions to any online fashion store with one embed.",
+    images: [{ url: "/brand/aurafit.png", alt: "AuraFit" }],
+  },
+  icons: {
+    icon: [{ url: "/brand/aurafit-icon.png", type: "image/png", sizes: "512x512" }],
+    apple: [{ url: "/brand/apple-touch.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport = {

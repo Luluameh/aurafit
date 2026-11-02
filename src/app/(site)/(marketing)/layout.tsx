@@ -8,7 +8,10 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
       <main className="flex-1">{children}</main>
       <footer className="border-t border-hairline">
         <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-6 text-sm text-stone sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-8 lg:px-8">
-          <p>FSH · catalog, photo, pairing.</p>
+          <p className="flex min-w-0 items-center gap-2">
+            <img src="/brand/aurafit.png" alt="AuraFit" className="h-8 w-auto shrink-0" />
+            <span className="truncate">· catalog, photo, pairing.</span>
+          </p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             <Link href="/stores/demo" className="fsh-link hover:text-noir">
               Catalog

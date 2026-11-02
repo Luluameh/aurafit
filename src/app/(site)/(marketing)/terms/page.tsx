@@ -4,14 +4,14 @@ import { POLICY_UPDATED, termsPolicy } from "@/lib/legal/policies";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms — FSH",
-  description: "Terms for using the FSH virtual fitting room.",
+  title: "Terms",
+  description: "Terms for using the AuraFit virtual fitting room.",
 };
 
 export default function TermsPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-      <p className="catalog-code">FSH</p>
+      <p className="catalog-code">AuraFit</p>
       <TextTransition
         as="h1"
         text="Terms"

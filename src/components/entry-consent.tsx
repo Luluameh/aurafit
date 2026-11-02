@@ -88,7 +88,7 @@ export function EntryConsent() {
               >
                 ← Back
               </button>
-              <h2 id="entry-consent-title" className="mt-4 font-display text-4xl text-noir">
+              <h2 id="entry-consent-title" className="mt-4 font-display text-3xl text-noir sm:text-4xl">
                 {page.title}
               </h2>
               <p className="mt-3 text-xs text-stone">{POLICY_UPDATED}</p>
@@ -96,11 +96,11 @@ export function EntryConsent() {
             </>
           ) : (
             <>
-              <p className="catalog-code">FSH</p>
+              <p className="catalog-code">AuraFit</p>
               <TextTransition
                 as="h2"
                 text="Before you enter"
-                className="mt-3 font-display text-4xl leading-none text-noir"
+                className="mt-3 font-display text-3xl leading-none text-noir sm:text-4xl"
               />
               <p id="entry-consent-title" className="sr-only">
                 Before you enter
