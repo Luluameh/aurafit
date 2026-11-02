@@ -6,6 +6,7 @@ import { SuggestionsModal } from "@/components/suggestions-modal";
 import { TextTransition } from "@/components/text-transition";
 import { FshLoaderOverlay } from "@/components/fsh-loader-3d";
 import { SkinToneSuggestionsPanel } from "@/components/skin-tone-suggestions-panel";
+import { AddToBag } from "@/components/store/add-to-bag";
 import { StoreGarmentPhoto } from "@/components/store-garment-photo";
 import type { Product } from "@/lib/data/products";
 import { storeHasGarmentBack, tryOnGarmentImage } from "@/lib/data/garment-views";
@@ -26,17 +27,31 @@ const MANNEQUINS = [
   {
     id: "fuller-man",
     name: "Fuller man",
+    group: "male",
     src: "/mannequins/fuller-man.jpg",
     back: "/mannequins/fuller-man-back.jpg",
   },
   {
+    id: "man",
+    name: "Man",
+    group: "male",
+    src: "/mannequins/man.jpg",
+    back: "/mannequins/man-back.jpg",
+  },
+  {
     id: "curvy-woman",
     name: "Curvy woman",
+    group: "female",
     src: "/mannequins/curvy-woman.jpg",
     back: "/mannequins/curvy-woman-back.jpg",
   },
-  { id: "woman", name: "Woman", src: "/mannequins/woman.jpg", back: "/mannequins/woman-back.jpg" },
-  { id: "man", name: "Man", src: "/mannequins/man.jpg", back: "/mannequins/man-back.jpg" },
+  {
+    id: "woman",
+    name: "Woman",
+    group: "female",
+    src: "/mannequins/woman.jpg",
+    back: "/mannequins/woman-back.jpg",
+  },
 ] as const;
 
 async function figureFile(src: string, filename: string) {
@@ -116,7 +131,6 @@ export function TryOnPanel({
   const brand = brandName ?? brandFromStore(storeSlug);
   const [step, setStep] = useState<Step>("setup");
   const [status, setStatus] = useState("");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [frontUrl, setFrontUrl] = useState<string | null>(null);
   const [backUrl, setBackUrl] = useState<string | null>(null);
@@ -138,12 +152,14 @@ export function TryOnPanel({
   const suggestedOnce = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [mannequinOpen, setMannequinOpen] = useState(false);
+  const [figureGroup, setFigureGroup] = useState<"female" | "male" | null>(null);
   const [figureName, setFigureName] = useState<string | null>(null);
-  const [backPreviewUrl, setBackPreviewUrl] = useState<string | null>(null);
   const [fittingMannequinBack, setFittingMannequinBack] = useState(false);
   const mannequinMenu = useRef<HTMLDivElement>(null);
   const mannequinFit = useRef(0);
   const figureNameRef = useRef<string | null>(null);
+  const painted = useRef(new Set<string>());
+  const [paintTick, setPaintTick] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -319,7 +335,6 @@ export function TryOnPanel({
         setFittingMannequinBack(false);
         if (face === "front" && figureNameRef.current) {
           setBackUrl(null);
-          setBackPreviewUrl(null);
         }
       }
       setError(null);
@@ -327,7 +342,6 @@ export function TryOnPanel({
       setLayerName(null);
       setStep("processing");
       setLookView(face === "back" ? "Back" : "Front");
-      setPreviewUrl(URL.createObjectURL(file));
       setStatus(source === "mannequin" ? "Setting the mannequin…" : "Sending your photo…");
       if (face === "front") {
         setSkinGuide(null);
@@ -403,14 +417,12 @@ export function TryOnPanel({
       setLayerName(null);
       setLookView("Front");
       setBackUrl(null);
-      setBackPreviewUrl(null);
       setFittingMannequinBack(false);
       setStep("processing");
       setStatus("Setting the mannequin…");
       try {
         const frontFile = await figureFile(figure.src, `${figure.id}.jpg`);
         if (stale()) return;
-        setPreviewUrl(URL.createObjectURL(frontFile));
         const frontId = await uploadCustomerPhoto(frontFile, { captureForSkin: false });
         if (stale()) return;
         setStatus(`Placing ${product.name} on the mannequin…`);
@@ -448,7 +460,6 @@ export function TryOnPanel({
       try {
         const backFile = await figureFile(figure.back, `${figure.id}-back.jpg`);
         if (stale()) return;
-        setBackPreviewUrl(URL.createObjectURL(backFile));
         const backId = await uploadCustomerPhoto(backFile, { captureForSkin: false });
         if (stale()) return;
         const backResult = await runTryOn({
@@ -523,12 +534,11 @@ export function TryOnPanel({
   );
 
   const hasStoreBack = storeHasGarmentBack(product);
-  const shown =
-    step === "processing" && previewUrl
-      ? previewUrl
-      : lookView === "Back" && hasStoreBack
-        ? backUrl ?? backPreviewUrl ?? (figureName ? frontUrl : null)
-        : frontUrl;
+  const shown = lookView === "Back" && hasStoreBack ? backUrl : frontUrl;
+  const imagePending = shown !== null && !painted.current.has(shown) && paintTick >= 0;
+  const coverPage = step === "processing" || imagePending;
+  const coverFrame =
+    coverPage || (lookView === "Back" && hasStoreBack && fittingMannequinBack && !backUrl);
 
   return (
     <div>
@@ -551,7 +561,13 @@ export function TryOnPanel({
           disabled={step === "processing"}
           aria-expanded={mannequinOpen}
           aria-haspopup="listbox"
-          onClick={() => setMannequinOpen((open) => !open)}
+          onClick={() => {
+            setMannequinOpen((open) => {
+              const next = !open;
+              if (next) setFigureGroup(null);
+              return next;
+            });
+          }}
           data-tour="mannequin"
           className="fsh-btn border border-hairline bg-white px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-noir disabled:opacity-40"
         >
@@ -564,28 +580,58 @@ export function TryOnPanel({
             className="absolute left-0 z-30 mt-2 w-full max-w-md border border-hairline bg-white p-3 shadow-[0_16px_40px_rgba(22,21,19,0.08)]"
           >
             <p className="px-1 text-sm leading-relaxed text-stone">
-              No photo needed. Pick a form and this piece is placed on it.
+              {figureGroup
+                ? "Pick a form. This piece is placed on it."
+                : "No photo needed. Choose a female or male form first."}
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {MANNEQUINS.map((figure) => (
+            {figureGroup ? (
+              <>
                 <button
-                  key={figure.id}
                   type="button"
-                  role="option"
-                  aria-selected={figureName === figure.name}
-                  onClick={() => void fitMannequin(figure)}
-                  className="text-left"
+                  onClick={() => setFigureGroup(null)}
+                  className="fsh-link mt-3 px-1 text-[11px] uppercase tracking-[0.14em] text-stone hover:text-noir"
                 >
-                  <span className="flex h-28 items-center justify-center overflow-hidden bg-[#eceae6] sm:h-36">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={figure.src} alt="" className="h-full w-full object-contain" />
-                  </span>
-                  <span className="mt-2 block text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] text-noir sm:text-[11px]">
-                    {figure.name}
-                  </span>
+                  ← Female or male
                 </button>
-              ))}
-            </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {MANNEQUINS.filter((figure) => figure.group === figureGroup).map((figure) => (
+                    <button
+                      key={figure.id}
+                      type="button"
+                      role="option"
+                      aria-selected={figureName === figure.name}
+                      onClick={() => void fitMannequin(figure)}
+                      className="text-left"
+                    >
+                      <span className="flex h-36 items-center justify-center overflow-hidden bg-[#eceae6] sm:h-44">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={figure.src} alt="" className="h-full w-full object-contain" />
+                      </span>
+                      <span className="mt-2 block text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] text-noir sm:text-[11px]">
+                        {figure.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFigureGroup("female")}
+                  className="fsh-btn border border-hairline bg-white px-3 py-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-noir"
+                >
+                  Female
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFigureGroup("male")}
+                  className="fsh-btn border border-hairline bg-white px-3 py-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-noir"
+                >
+                  Male
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -626,6 +672,10 @@ export function TryOnPanel({
               src={shown}
               alt={figureName ? `${product.name} on the ${figureName.toLowerCase()} mannequin` : "You in this piece"}
               className="absolute inset-0 h-full w-full object-contain"
+              onLoad={() => {
+                painted.current.add(shown);
+                setPaintTick((tick) => tick + 1);
+              }}
             />
           ) : (
             <button
@@ -667,13 +717,17 @@ export function TryOnPanel({
               {figureName ? "Your photo" : lookView === "Back" ? "Different back photo" : "Different photo"}
             </button>
           )}
-          {fittingMannequinBack && lookView === "Back" && !backUrl && (
-            <span className="pointer-events-none absolute inset-x-4 bottom-16 z-10 bg-white px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-noir">
-              Fitting the back
-            </span>
+          {coverFrame && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#f6f5f2]">
+              <FshLoaderOverlay
+                compact
+                title={status || "Placing the piece on the photo…"}
+                detail="This stays up until the garment is on."
+              />
+            </div>
           )}
           {hasStoreBack && (frontUrl || backUrl) && (
-            <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center gap-2">
+            <div className="absolute inset-x-0 bottom-3 z-30 flex justify-center gap-2">
               <button
                 type="button"
                 onClick={() => setLookView("Front")}
@@ -706,6 +760,14 @@ export function TryOnPanel({
             {layerName ? `Adding ${layerName}` : "The piece"}
           </span>
         </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-4 border border-hairline bg-[#f6f5f2] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="catalog-code">Add this piece</p>
+          <p className="mt-1 font-display text-3xl text-noir">${product.price}</p>
+        </div>
+        <AddToBag productId={product.id} className="w-full sm:w-auto" />
       </div>
 
       <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
@@ -808,7 +870,7 @@ export function TryOnPanel({
       )}
 
       {mounted &&
-        step === "processing" &&
+        coverPage &&
         createPortal(
           <div className="fixed inset-0 z-[140] flex items-center justify-center bg-canvas px-6">
             <FshLoaderOverlay

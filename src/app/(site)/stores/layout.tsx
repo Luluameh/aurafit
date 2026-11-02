@@ -1,3 +1,4 @@
+import { BagLink } from "@/components/store/bag-link";
 import { StoreNav } from "@/components/store/store-nav";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -20,12 +21,15 @@ export default function StorefrontLayout({ children }: LayoutProps<"/stores">) {
           >
             ATELIER
           </Link>
-          <Link
-            href="/stores/demo/product/column-dress?try=1"
-            className="shrink-0 text-[9px] uppercase tracking-[0.08em] text-noir sm:text-[11px] sm:tracking-[0.16em]"
-          >
-            Fitting room
-          </Link>
+          <div className="flex shrink-0 items-center gap-3 sm:gap-5">
+            <BagLink storeSlug="demo" />
+            <Link
+              href="/stores/demo/product/column-dress?try=1"
+              className="shrink-0 text-[9px] uppercase tracking-[0.08em] text-noir sm:text-[11px] sm:tracking-[0.16em]"
+            >
+              Fitting room
+            </Link>
+          </div>
         </div>
         <div className="relative border-t border-hairline lg:border-t-0">
           <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10">

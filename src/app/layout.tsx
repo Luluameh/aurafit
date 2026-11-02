@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Bodoni_Moda, Manrope } from "next/font/google";
+import { CartNotice } from "@/components/store/cart-notice";
+import { BagProvider } from "@/lib/cart/bag";
 import { SiteIntroGate } from "@/components/site-intro-gate";
 import "./globals.css";
 
@@ -45,7 +47,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${bodoni.variable} ${manrope.variable} h-full`}>
       <body className="min-h-full font-body antialiased">
-        <SiteIntroGate>{children}</SiteIntroGate>
+        <BagProvider>
+          <SiteIntroGate>{children}</SiteIntroGate>
+          <CartNotice />
+        </BagProvider>
       </body>
     </html>
   );

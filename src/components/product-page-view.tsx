@@ -1,5 +1,6 @@
 "use client";
 
+import { AddToBag } from "@/components/store/add-to-bag";
 import { StoreGarmentPhoto } from "@/components/store-garment-photo";
 import { TextTransition } from "@/components/text-transition";
 import { TryOnPanel } from "@/components/try-on-panel";
@@ -59,30 +60,33 @@ export function ProductPageView({ product, storeSlug }: ProductPageViewProps) {
             className="mt-2 font-display text-3xl text-noir sm:text-4xl md:text-5xl"
           />
           <p className="mt-3 text-xl tabular-nums">${product.price}</p>
+          <div className="mt-6 flex max-w-md flex-col gap-3">
+            <AddToBag productId={product.id} className="w-full" />
+            {canTry ? (
+              <Link
+                href={`/stores/${storeSlug}/product/${product.id}?try=1`}
+                className="fsh-btn flex w-full items-center justify-center border border-noir bg-white py-4 text-xs font-semibold uppercase tracking-[0.16em] text-noir"
+              >
+                See it on you
+              </Link>
+            ) : (
+              <p className="text-sm leading-relaxed text-stone">
+                Suggested when you try on a dress, coat, or shoe from this shop.
+              </p>
+            )}
+          </div>
+          {canTry && (
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-stone">
+              {photoPrompt(product.photoGuide)}
+              {storeHasGarmentBack(product)
+                ? " This piece also has a back, if you want to see that too."
+                : ""}
+            </p>
+          )}
           <dl className="mt-8 divide-y divide-hairline border-y border-hairline text-sm">
             <Spec label="Colour" value={product.colors.join(" · ")} />
             <Spec label="Scene" value={product.tags.slice(0, 2).join(" · ")} />
           </dl>
-          {canTry ? (
-            <>
-              <p className="mt-6 max-w-sm text-sm leading-relaxed text-noir">
-                {photoPrompt(product.photoGuide)}
-                {storeHasGarmentBack(product)
-                  ? " This piece also has a back, if you want to see that too."
-                  : ""}
-              </p>
-              <Link
-                href={`/stores/${storeSlug}/product/${product.id}?try=1`}
-                className="fsh-btn mt-6 flex w-full items-center justify-center bg-noir py-4 text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-charcoal sm:w-72"
-              >
-                See it on you
-              </Link>
-            </>
-          ) : (
-            <p className="mt-8 text-sm text-stone">
-              Suggested when you try on a dress, coat, or shoe from this shop.
-            </p>
-          )}
         </div>
       </div>
     </div>
