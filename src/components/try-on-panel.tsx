@@ -20,6 +20,30 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const PHOTO_CONSENT_KEY = "fsh-photo-consent-v1";
+
+const MANNEQUINS = [
+  {
+    id: "fuller-man",
+    name: "Fuller man",
+    src: "/mannequins/fuller-man.jpg",
+    back: "/mannequins/fuller-man-back.jpg",
+  },
+  {
+    id: "curvy-woman",
+    name: "Curvy woman",
+    src: "/mannequins/curvy-woman.jpg",
+    back: "/mannequins/curvy-woman-back.jpg",
+  },
+  { id: "woman", name: "Woman", src: "/mannequins/woman.jpg", back: "/mannequins/woman-back.jpg" },
+  { id: "man", name: "Man", src: "/mannequins/man.jpg", back: "/mannequins/man-back.jpg" },
+] as const;
+
+async function figureFile(src: string, filename: string) {
+  const response = await fetch(src);
+  if (!response.ok) throw new Error("Could not load that mannequin");
+  const blob = await response.blob();
+  return new File([blob], filename, { type: blob.type || "image/jpeg" });
+}
 type PhotoSlot = "main" | "pair" | "change" | "other";
 
 type WornFace = "front" | "back";
@@ -110,10 +134,30 @@ export function TryOnPanel({
   const [photoSlot, setPhotoSlot] = useState<PhotoSlot | null>(null);
   const suggestedOnce = useRef(false);
   const [mounted, setMounted] = useState(false);
+  const [mannequinOpen, setMannequinOpen] = useState(false);
+  const [figureName, setFigureName] = useState<string | null>(null);
+  const [backPreviewUrl, setBackPreviewUrl] = useState<string | null>(null);
+  const [fittingMannequinBack, setFittingMannequinBack] = useState(false);
+  const mannequinMenu = useRef<HTMLDivElement>(null);
+  const mannequinFit = useRef(0);
+  const figureNameRef = useRef<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    figureNameRef.current = figureName;
+  }, [figureName]);
+
+  useEffect(() => {
+    if (!mannequinOpen) return;
+    function onPointer(event: PointerEvent) {
+      if (!mannequinMenu.current?.contains(event.target as Node)) setMannequinOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointer);
+    return () => document.removeEventListener("pointerdown", onPointer);
+  }, [mannequinOpen]);
 
   const openPicker = useCallback((slot: PhotoSlot) => {
     pickers.current[slot]?.click();
@@ -259,7 +303,7 @@ export function TryOnPanel({
   }, [openSuggestions, runSkinAnalysis]);
 
   const fitFace = useCallback(
-    async (file: File, face: WornFace, allowEstimate = false) => {
+    async (file: File, face: WornFace, allowEstimate = false, source: "photo" | "mannequin" = "photo") => {
       if (face === "back" && !storeHasGarmentBack(product) && !allowEstimate) {
         setPendingBack(file);
         setBackChoice("ask");
@@ -267,24 +311,39 @@ export function TryOnPanel({
         return;
       }
 
+      if (source === "photo") {
+        mannequinFit.current += 1;
+        setFittingMannequinBack(false);
+        if (face === "front" && figureNameRef.current) {
+          setBackUrl(null);
+          setBackPreviewUrl(null);
+        }
+      }
       setError(null);
       setSuggestionsOpen(false);
       setLayerName(null);
       setStep("processing");
       setLookView(face === "back" ? "Back" : "Front");
       setPreviewUrl(URL.createObjectURL(file));
-      setStatus("Sending your photo…");
+      setStatus(source === "mannequin" ? "Setting the mannequin…" : "Sending your photo…");
       if (face === "front") {
         setSkinGuide(null);
         setSkinError(null);
+        if (source === "photo") setFigureName(null);
       }
 
       try {
-        const fileId = await uploadCustomerPhoto(file, { captureForSkin: face === "front" });
+        const fileId = await uploadCustomerPhoto(file, {
+          captureForSkin: source === "photo" && face === "front",
+        });
         const estimate = face === "back" && !storeHasGarmentBack(product);
         const reference = estimate ? await requestAssumption() : tryOnGarmentImage(product, face);
         setBackIsEstimate(estimate);
-        setStatus(`Placing ${product.name} on your photo…`);
+        setStatus(
+          source === "mannequin"
+            ? `Placing ${product.name} on the mannequin…`
+            : `Placing ${product.name} on your photo…`,
+        );
         const url = await runTryOn({
           srcFileId: fileId,
           refFileUrl: reference,
@@ -305,12 +364,14 @@ export function TryOnPanel({
         setStatus("");
         if (!suggestedOnce.current) {
           suggestedOnce.current = true;
-          await afterTryOnResult();
-        } else if (face === "front") {
+          if (source === "mannequin") await openSuggestions();
+          else await afterTryOnResult();
+        } else if (face === "front" && source === "photo") {
           void runSkinAnalysis(analysisFileIdRef.current);
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not fit that photo");
+        if (source === "mannequin") setFigureName(null);
+        setError(e instanceof Error ? e.message : source === "mannequin" ? "Could not fit that mannequin" : "Could not fit that photo");
         setStep(frontUrl || backUrl ? "result" : "setup");
         setStatus("");
       }
@@ -319,12 +380,94 @@ export function TryOnPanel({
       afterTryOnResult,
       backUrl,
       frontUrl,
+      openSuggestions,
       product,
       requestAssumption,
       runSkinAnalysis,
       runTryOn,
       uploadCustomerPhoto,
     ],
+  );
+
+  const fitMannequin = useCallback(
+    async (figure: (typeof MANNEQUINS)[number]) => {
+      const ticket = ++mannequinFit.current;
+      const stale = () => ticket !== mannequinFit.current;
+      setMannequinOpen(false);
+      setError(null);
+      setFigureName(figure.name);
+      setSuggestionsOpen(false);
+      setLayerName(null);
+      setLookView("Front");
+      setBackUrl(null);
+      setBackPreviewUrl(null);
+      setFittingMannequinBack(false);
+      setStep("processing");
+      setStatus("Setting the mannequin…");
+      try {
+        const frontFile = await figureFile(figure.src, `${figure.id}.jpg`);
+        if (stale()) return;
+        setPreviewUrl(URL.createObjectURL(frontFile));
+        const frontId = await uploadCustomerPhoto(frontFile, { captureForSkin: false });
+        if (stale()) return;
+        setStatus(`Placing ${product.name} on the mannequin…`);
+        const frontResult = await runTryOn({
+          srcFileId: frontId,
+          refFileUrl: tryOnGarmentImage(product, "front"),
+          garmentCategory: product.tryOnCategory,
+          workingCopy: `Dressing the front view in ${product.name}…`,
+          quiet: true,
+        });
+        if (stale()) return;
+        setFrontUrl(frontResult);
+        setResultUrl(frontResult);
+        setBackIsEstimate(false);
+        wornFace.current = "front";
+        setStep("result");
+        setStatus("");
+        if (!suggestedOnce.current) {
+          suggestedOnce.current = true;
+          await openSuggestions();
+        }
+      } catch (e) {
+        if (stale()) return;
+        setFigureName(null);
+        setError(e instanceof Error ? e.message : "Could not fit that mannequin");
+        setStep(frontUrl || backUrl ? "result" : "setup");
+        setStatus("");
+        return;
+      }
+
+      if (!storeHasGarmentBack(product) || stale()) return;
+
+      setFittingMannequinBack(true);
+      setStatus("Fitting the back of the mannequin…");
+      try {
+        const backFile = await figureFile(figure.back, `${figure.id}-back.jpg`);
+        if (stale()) return;
+        setBackPreviewUrl(URL.createObjectURL(backFile));
+        const backId = await uploadCustomerPhoto(backFile, { captureForSkin: false });
+        if (stale()) return;
+        const backResult = await runTryOn({
+          srcFileId: backId,
+          refFileUrl: tryOnGarmentImage(product, "back"),
+          garmentCategory: product.tryOnCategory,
+          workingCopy: `Dressing the back view in ${product.name}…`,
+          quiet: true,
+        });
+        if (stale()) return;
+        setBackUrl(backResult);
+        setBackIsEstimate(false);
+        setStatus("");
+      } catch (e) {
+        if (stale()) return;
+        setError(e instanceof Error ? e.message : "The front is ready. The back view could not be fitted.");
+        setStatus("");
+      } finally {
+        if (!stale()) setFittingMannequinBack(false);
+      }
+    },
+    [backUrl, frontUrl, openSuggestions, product, runTryOn, uploadCustomerPhoto],
   );
 
   const addToLook = useCallback(
@@ -381,7 +524,7 @@ export function TryOnPanel({
     step === "processing" && previewUrl
       ? previewUrl
       : lookView === "Back" && hasStoreBack
-        ? backUrl
+        ? backUrl ?? backPreviewUrl ?? frontUrl
         : frontUrl;
 
   return (
@@ -396,6 +539,50 @@ export function TryOnPanel({
           <p className="mt-1 text-base tabular-nums text-stone sm:text-lg">${product.price}</p>
         </div>
         <p className="max-w-xs text-sm leading-relaxed text-stone">{photoPrompt(product.photoGuide)}</p>
+      </div>
+
+      <div ref={mannequinMenu} className="relative mb-5">
+        <button
+          type="button"
+          disabled={step === "processing"}
+          aria-expanded={mannequinOpen}
+          aria-haspopup="listbox"
+          onClick={() => setMannequinOpen((open) => !open)}
+          className="fsh-btn border border-hairline bg-white px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-noir disabled:opacity-40"
+        >
+          Mannequin try
+        </button>
+        {mannequinOpen && (
+          <div
+            role="listbox"
+            aria-label="Choose a mannequin"
+            className="absolute left-0 z-30 mt-2 w-[min(100vw-2rem,28rem)] border border-hairline bg-white p-3 shadow-[0_16px_40px_rgba(22,21,19,0.08)]"
+          >
+            <p className="px-1 text-sm leading-relaxed text-stone">
+              No photo needed. Pick a form and this piece is placed on it.
+            </p>
+            <div className="mt-3 grid grid-cols-4 gap-2">
+              {MANNEQUINS.map((figure) => (
+                <button
+                  key={figure.id}
+                  type="button"
+                  role="option"
+                  aria-selected={figureName === figure.name}
+                  onClick={() => void fitMannequin(figure)}
+                  className="text-left"
+                >
+                  <span className="flex h-28 items-center justify-center overflow-hidden bg-[#eceae6] sm:h-36">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={figure.src} alt="" className="h-full w-full object-contain" />
+                  </span>
+                  <span className="mt-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-noir">
+                    {figure.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -432,7 +619,7 @@ export function TryOnPanel({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={shown}
-              alt="You in this piece"
+              alt={figureName ? `${product.name} on the ${figureName.toLowerCase()} mannequin` : "You in this piece"}
               className="absolute inset-0 h-full w-full object-contain"
             />
           ) : (
@@ -451,7 +638,7 @@ export function TryOnPanel({
             </button>
           )}
           <span className="pointer-events-none absolute left-4 top-4 z-10 bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-noir">
-            You
+            {figureName ?? "You"}
           </span>
           {shown && (
             <button
@@ -460,8 +647,13 @@ export function TryOnPanel({
               onClick={() => requestPhoto(lookView === "Back" && hasStoreBack ? "pair" : "main")}
               className="fsh-btn absolute right-4 top-4 z-10 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-noir disabled:opacity-40"
             >
-              Different photo
+              {figureName ? "Your photo" : "Different photo"}
             </button>
+          )}
+          {fittingMannequinBack && lookView === "Back" && !backUrl && (
+            <span className="pointer-events-none absolute inset-x-4 bottom-16 z-10 bg-white px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-noir">
+              Fitting the back
+            </span>
           )}
           {hasStoreBack && (frontUrl || backUrl) && (
             <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center gap-2">
@@ -503,9 +695,19 @@ export function TryOnPanel({
         {brand} will not use your photo for any commercial purposes.
       </p>
 
-      {hasStoreBack && frontUrl && !backUrl && (
+      {hasStoreBack && frontUrl && !backUrl && !figureName && (
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
           This piece has a back as well. Open Back, then add a photo with your back to the camera if you want to see it.
+        </p>
+      )}
+      {figureName && hasStoreBack && fittingMannequinBack && (
+        <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
+          The front is ready. The back of this mannequin is being fitted with the back of the piece.
+        </p>
+      )}
+      {figureName && hasStoreBack && backUrl && lookView === "Front" && (
+        <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
+          Open Back to see this piece on the back of the mannequin.
         </p>
       )}
 
