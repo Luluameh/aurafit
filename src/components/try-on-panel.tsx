@@ -527,7 +527,7 @@ export function TryOnPanel({
     step === "processing" && previewUrl
       ? previewUrl
       : lookView === "Back" && hasStoreBack
-        ? backUrl ?? backPreviewUrl ?? frontUrl
+        ? backUrl ?? backPreviewUrl ?? (figureName ? frontUrl : null)
         : frontUrl;
 
   return (
@@ -664,7 +664,7 @@ export function TryOnPanel({
               onClick={() => requestPhoto(lookView === "Back" && hasStoreBack ? "pair" : "main")}
               className="fsh-btn absolute right-2 top-2 z-10 max-w-[46%] bg-white px-2 py-2 text-[9px] font-semibold uppercase leading-tight tracking-[0.08em] text-noir disabled:opacity-40 sm:right-4 sm:top-4 sm:px-3 sm:text-[10px] sm:tracking-[0.12em]"
             >
-              {figureName ? "Your photo" : "Different photo"}
+              {figureName ? "Your photo" : lookView === "Back" ? "Different back photo" : "Different photo"}
             </button>
           )}
           {fittingMannequinBack && lookView === "Back" && !backUrl && (
@@ -714,7 +714,9 @@ export function TryOnPanel({
 
       {hasStoreBack && frontUrl && !backUrl && !figureName && (
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
-          This piece has a back as well. Open Back, then add a photo with your back to the camera if you want to see it.
+          {lookView === "Back"
+            ? "Add a photo with your back to the camera if you want to see this side."
+            : "This piece has a back as well. Open Back, then add a photo with your back to the camera if you want to see it."}
         </p>
       )}
       {figureName && hasStoreBack && fittingMannequinBack && (
