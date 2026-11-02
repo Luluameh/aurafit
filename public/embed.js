@@ -152,7 +152,9 @@
     });
   }
 
+  var brand = text(script.getAttribute("data-brand"));
   var widgetUrl = base + "/widget?store=" + encodeURIComponent(store);
+  if (brand) widgetUrl += "&brand=" + encodeURIComponent(brand);
 
   function openPanel() {
     var catalog = readCatalog();

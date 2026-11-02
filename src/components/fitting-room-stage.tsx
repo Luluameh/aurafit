@@ -1,5 +1,6 @@
 "use client";
 
+import { TextTransition } from "@/components/text-transition";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
@@ -28,7 +29,11 @@ export function FittingRoomStage() {
           <p className="text-[10px] uppercase tracking-[0.18em] text-stone sm:text-[11px] sm:tracking-[0.22em]">
             In the studio
           </p>
-          <h2 className="mt-3 font-display text-3xl sm:text-4xl">Cloth, then the fitting room</h2>
+          <TextTransition
+            as="h2"
+            text="Cloth, then the fitting room"
+            className="mt-3 font-display text-3xl sm:text-4xl"
+          />
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-stone">
             See a piece on your photo, then add a shoe or a bag from this shop to the same look.
           </p>

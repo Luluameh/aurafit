@@ -1,30 +1,28 @@
 "use client";
 
+import { PhotoDisclaimerModal } from "@/components/photo-disclaimer-modal";
 import { SuggestionsModal } from "@/components/suggestions-modal";
+import { TextTransition } from "@/components/text-transition";
 import { FshLoaderOverlay } from "@/components/fsh-loader-3d";
 import { SkinToneSuggestionsPanel } from "@/components/skin-tone-suggestions-panel";
 import { StoreGarmentPhoto } from "@/components/store-garment-photo";
 import type { Product } from "@/lib/data/products";
-import {
-  defaultPhotoChoice,
-  getPhotoOptions,
-  type PhotoOption,
-} from "@/lib/data/photo-guide";
-import { garmentViewNotice, storeHasGarmentBack, tryOnGarmentImage } from "@/lib/data/garment-views";
+import { storeHasGarmentBack, tryOnGarmentImage } from "@/lib/data/garment-views";
 import {
   buildSkinToneBeautyGuide,
   type SkinToneBeautyGuide,
 } from "@/lib/beauty/skin-tone-suggestions";
 import type { SkinToneColorResult } from "@/lib/youcam/client";
 import type { CompleteLookGuide } from "@/lib/stylist/complete-look";
-import { prepareCustomerPhoto } from "@/lib/photo/prepare-customer-photo";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { photoPrompt } from "@/lib/data/photo-guide";
+import { brandFromStore } from "@/lib/data/stores";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+
+const PHOTO_CONSENT_KEY = "fsh-photo-consent-v1";
+type PhotoSlot = "main" | "pair" | "change" | "other";
 
 type WornFace = "front" | "back";
-
-function faceFor(choice: PhotoOption["id"]): WornFace {
-  return choice === "back-full" ? "back" : "front";
-}
 
 type Step = "setup" | "processing" | "result";
 
@@ -32,6 +30,7 @@ type TryOnPanelProps = {
   product: Product;
   storeSlug?: string;
   catalog?: Product[];
+  brandName?: string;
 };
 
 async function pollTask(
@@ -81,12 +80,15 @@ async function pollSkinToneTask(taskId: string): Promise<SkinToneColorResult> {
   throw new Error("Skin analysis timed out — wardrobe colours may still help.");
 }
 
-export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelProps) {
+export function TryOnPanel({
+  product,
+  storeSlug = "demo",
+  catalog,
+  brandName,
+}: TryOnPanelProps) {
+  const brand = brandName ?? brandFromStore(storeSlug);
   const [step, setStep] = useState<Step>("setup");
   const [status, setStatus] = useState("");
-  const [photoChoice, setPhotoChoice] = useState<PhotoOption["id"]>(() =>
-    defaultPhotoChoice(product.photoGuide),
-  );
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [frontUrl, setFrontUrl] = useState<string | null>(null);
@@ -97,7 +99,6 @@ export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelP
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [layerName, setLayerName] = useState<string | null>(null);
   const [lookView, setLookView] = useState<"Front" | "Back">("Front");
-  const [pairedBack, setPairedBack] = useState<File | null>(null);
   const [pendingBack, setPendingBack] = useState<File | null>(null);
   const [backChoice, setBackChoice] = useState<"ask" | "yes" | "no" | null>(null);
   const [backIsEstimate, setBackIsEstimate] = useState(false);
@@ -105,11 +106,37 @@ export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelP
   const [skinLoading, setSkinLoading] = useState(false);
   const [skinError, setSkinError] = useState<string | null>(null);
   const analysisFileIdRef = useRef<string | null>(null);
+  const pickers = useRef<Partial<Record<PhotoSlot, HTMLInputElement | null>>>({});
+  const [photoSlot, setPhotoSlot] = useState<PhotoSlot | null>(null);
+  const suggestedOnce = useRef(false);
+  const [mounted, setMounted] = useState(false);
 
-  const photoOptions = useMemo(
-    () => getPhotoOptions(product.photoGuide),
-    [product.photoGuide],
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const openPicker = useCallback((slot: PhotoSlot) => {
+    pickers.current[slot]?.click();
+  }, []);
+
+  const requestPhoto = useCallback(
+    (slot: PhotoSlot) => {
+      if (step === "processing") return;
+      if (window.sessionStorage.getItem(PHOTO_CONSENT_KEY) === "1") {
+        openPicker(slot);
+        return;
+      }
+      setPhotoSlot(slot);
+    },
+    [openPicker, step],
   );
+
+  const acceptPhoto = useCallback(() => {
+    window.sessionStorage.setItem(PHOTO_CONSENT_KEY, "1");
+    const slot = photoSlot;
+    setPhotoSlot(null);
+    if (slot) openPicker(slot);
+  }, [openPicker, photoSlot]);
 
   const runTryOn = useCallback(
     async (input: {
@@ -143,11 +170,10 @@ export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelP
 
   const uploadCustomerPhoto = useCallback(
     async (file: File, options?: { captureForSkin?: boolean }) => {
-      const prepared = await prepareCustomerPhoto(file);
       const clothForm = new FormData();
-      clothForm.append("file", prepared.file);
+      clothForm.append("file", file, file.name || "customer.jpg");
       const analysisForm = new FormData();
-      analysisForm.append("file", prepared.file);
+      analysisForm.append("file", file, file.name || "customer.jpg");
       const captureForSkin = options?.captureForSkin !== false;
       const [uploadRes, analysisRes] = await Promise.all([
         fetch("/api/youcam/upload", { method: "POST", body: clothForm }),
@@ -232,174 +258,73 @@ export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelP
     void runSkinAnalysis(analysisFileIdRef.current);
   }, [openSuggestions, runSkinAnalysis]);
 
-  const onFile = useCallback(
-    async (file: File) => {
-      setError(null);
-      setSuggestionsOpen(false);
-      setSkinGuide(null);
-      setSkinError(null);
-      setLayerName(null);
-      setStep("processing");
-      setStatus("Removing the background…");
-      setResultUrl(null);
-      setFrontUrl(null);
-      setBackUrl(null);
-      setPreviewUrl(URL.createObjectURL(file));
-      const backPhoto = pairedBack;
-      const fitBoth =
-        Boolean(backPhoto) &&
-        faceFor(photoChoice) === "front" &&
-        (storeHasGarmentBack(product) || backChoice === "yes");
-      if (fitBoth) setPairedBack(null);
-
-      try {
-        if (backPhoto && fitBoth) {
-          setStatus("Removing the background from your front photo…");
-          const frontId = await uploadCustomerPhoto(file);
-          setStatus("Removing the background from your back photo…");
-          const backId = await uploadCustomerPhoto(backPhoto, { captureForSkin: false });
-          const backReference = storeHasGarmentBack(product)
-            ? tryOnGarmentImage(product, "back")
-            : await requestAssumption();
-          setBackIsEstimate(!storeHasGarmentBack(product));
-          setStatus(`Dressing your front and back in ${product.name}…`);
-          const [frontResult, backResult] = await Promise.allSettled([
-            runTryOn({
-              srcFileId: frontId,
-              refFileUrl: tryOnGarmentImage(product),
-              garmentCategory: product.tryOnCategory,
-              workingCopy: "",
-              quiet: true,
-            }),
-            runTryOn({
-              srcFileId: backId,
-              refFileUrl: backReference,
-              garmentCategory: product.tryOnCategory,
-              workingCopy: "",
-              quiet: true,
-            }),
-          ]);
-          if (frontResult.status === "rejected") {
-            throw frontResult.reason instanceof Error
-              ? frontResult.reason
-              : new Error("Could not fit your front photo");
-          }
-          wornFace.current = "front";
-          setFrontUrl(frontResult.value);
-          setResultUrl(frontResult.value);
-          setLookView("Front");
-          if (backResult.status === "fulfilled") {
-            setBackUrl(backResult.value);
-          } else {
-            setBackUrl(null);
-            setError("Your front photo is ready. The back photo could not be fitted, so no back view was invented.");
-          }
-          setStep("result");
-          setStatus("");
-          await afterTryOnResult();
-          return;
-        }
-
-        setStatus("Removing the background…");
-        const fileId = await uploadCustomerPhoto(file);
-        const url = await runTryOn({
-          srcFileId: fileId,
-          refFileUrl: tryOnGarmentImage(product),
-          garmentCategory: product.tryOnCategory,
-          workingCopy: `Dressing you in ${product.name}…`,
-        });
-        const face = faceFor(photoChoice);
-        wornFace.current = face;
-        setResultUrl(url);
-        setFrontUrl(face === "front" ? url : null);
-        setBackUrl(face === "back" ? url : null);
-        setBackIsEstimate(false);
-        setLookView(face === "back" ? "Back" : "Front");
-        setStep("result");
-        setStatus("");
-        await afterTryOnResult();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong");
-        setStep("setup");
-        setStatus("");
-      }
-    },
-    [afterTryOnResult, backChoice, pairedBack, photoChoice, product, requestAssumption, runTryOn, uploadCustomerPhoto],
-  );
-
-  const onOtherSide = useCallback(
-    async (file: File, allowEstimate = false) => {
-      const face: WornFace = frontUrl && !backUrl ? "back" : "front";
+  const fitFace = useCallback(
+    async (file: File, face: WornFace, allowEstimate = false) => {
       if (face === "back" && !storeHasGarmentBack(product) && !allowEstimate) {
         setPendingBack(file);
         setBackChoice("ask");
         setError(null);
         return;
       }
+
       setError(null);
       setSuggestionsOpen(false);
+      setLayerName(null);
       setStep("processing");
-      setStatus("Removing the background…");
+      setLookView(face === "back" ? "Back" : "Front");
+      setPreviewUrl(URL.createObjectURL(file));
+      setStatus("Sending your photo…");
+      if (face === "front") {
+        setSkinGuide(null);
+        setSkinError(null);
+      }
 
       try {
-        const prepared = await prepareCustomerPhoto(file);
-        setStatus(
-          prepared.backgroundRemoved
-            ? face === "back"
-              ? "Placing the clothes on your back photo…"
-              : "Placing the clothes on your front photo…"
-            : "Background removal was unavailable. Using your original photo…",
-        );
-        const form = new FormData();
-        form.append("file", prepared.file);
-        const uploadRes = await fetch("/api/youcam/upload", { method: "POST", body: form });
-        const analysisForm = new FormData();
-        analysisForm.append("file", prepared.file);
-        if (face === "front") {
-          void fetch("/api/youcam/upload?purpose=analysis", {
-            method: "POST",
-            body: analysisForm,
-          })
-            .then(async (analysisRes) => {
-              if (!analysisRes.ok) return;
-              const analysisJson = (await analysisRes.json()) as { fileId?: string };
-              if (analysisJson.fileId) analysisFileIdRef.current = analysisJson.fileId;
-            })
-            .catch(() => {});
-        }
-        const uploadJson = (await uploadRes.json()) as { fileId?: string; error?: string };
-        if (!uploadRes.ok || !uploadJson.fileId) {
-          throw new Error(uploadJson.error ?? "Upload failed");
-        }
-        const reference =
-          face === "back" && !storeHasGarmentBack(product)
-            ? await requestAssumption()
-            : tryOnGarmentImage(product, face);
-        setBackIsEstimate(face === "back" && !storeHasGarmentBack(product));
+        const fileId = await uploadCustomerPhoto(file, { captureForSkin: face === "front" });
+        const estimate = face === "back" && !storeHasGarmentBack(product);
+        const reference = estimate ? await requestAssumption() : tryOnGarmentImage(product, face);
+        setBackIsEstimate(estimate);
+        setStatus(`Placing ${product.name} on your photo…`);
         const url = await runTryOn({
-          srcFileId: uploadJson.fileId,
+          srcFileId: fileId,
           refFileUrl: reference,
           garmentCategory: product.tryOnCategory,
           workingCopy:
             face === "back"
               ? `Dressing the back view in ${product.name}…`
               : `Dressing the front view in ${product.name}…`,
+          quiet: true,
         });
         if (face === "front") setFrontUrl(url);
         else setBackUrl(url);
-        setLookView(face === "back" ? "Back" : "Front");
         setResultUrl(url);
         wornFace.current = face;
         setPendingBack(null);
+        setBackChoice(estimate ? "yes" : null);
         setStep("result");
         setStatus("");
+        if (!suggestedOnce.current) {
+          suggestedOnce.current = true;
+          await afterTryOnResult();
+        } else if (face === "front") {
+          void runSkinAnalysis(analysisFileIdRef.current);
+        }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not add that view");
-        setStep("result");
+        setError(e instanceof Error ? e.message : "Could not fit that photo");
+        setStep(frontUrl || backUrl ? "result" : "setup");
         setStatus("");
       }
     },
-    [backUrl, frontUrl, product, requestAssumption, runTryOn],
+    [
+      afterTryOnResult,
+      backUrl,
+      frontUrl,
+      product,
+      requestAssumption,
+      runSkinAnalysis,
+      runTryOn,
+      uploadCustomerPhoto,
+    ],
   );
 
   const addToLook = useCallback(
@@ -451,152 +376,113 @@ export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelP
     [backUrl, frontUrl, lookView, resultUrl, runTryOn],
   );
 
-  const youSrc = resultUrl ?? previewUrl;
+  const hasStoreBack = storeHasGarmentBack(product);
+  const shown =
+    step === "processing" && previewUrl
+      ? previewUrl
+      : lookView === "Back" && hasStoreBack
+        ? backUrl
+        : frontUrl;
 
   return (
     <div>
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl text-noir sm:text-3xl md:text-4xl">{product.name}</h1>
+          <TextTransition
+            as="h1"
+            text={product.name}
+            className="font-display text-2xl text-noir sm:text-3xl md:text-4xl"
+          />
           <p className="mt-1 text-base tabular-nums text-stone sm:text-lg">${product.price}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {photoOptions.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              disabled={step === "processing"}
-              onClick={() => setPhotoChoice(option.id)}
-              className={`fsh-tab px-3 py-2 text-[10px] font-medium sm:px-4 sm:text-xs disabled:opacity-40 ${
-                photoChoice === option.id ? "bg-noir text-white" : "bg-mist text-noir"
-              }`}
-            >
-              {option.label.replace(" · ", " ")}
-            </button>
-          ))}
-        </div>
+        <p className="max-w-xs text-sm leading-relaxed text-stone">{photoPrompt(product.photoGuide)}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="relative aspect-[3/4] overflow-hidden bg-[#eceae6]">
-          {frontUrl || backUrl ? (
-            <>
-              {lookView === "Back" && !backUrl ? (
-                <p className="absolute inset-0 flex items-center justify-center px-8 text-center text-sm leading-relaxed text-noir">
-                  Your front fitting stays on Front. Add your back photo to see this piece from behind. A back is not created from the front photo.
-                </p>
-              ) : (
-                <img
-                  src={lookView === "Back" ? (backUrl ?? "") : (frontUrl ?? backUrl ?? "")}
-                  alt="You in this piece"
-                  className="absolute inset-0 h-full w-full object-contain"
-                />
-              )}
-              <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLookView("Front")}
-                  className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                    lookView === "Front" ? "bg-noir text-white" : "bg-white text-noir"
-                  }`}
-                >
-                  Front
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLookView("Back")}
-                  className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                    lookView === "Back" ? "bg-noir text-white" : "bg-white text-noir"
-                  }`}
-                >
-                  Back
-                </button>
-              </div>
-              {step === "processing" && (
-                <div className="fsh-overlay absolute inset-0 z-20 flex items-center justify-center bg-noir/80 px-6 transition-opacity duration-300">
-                  <div className="w-full max-w-xs bg-white">
-                    <FshLoaderOverlay compact title={status || "Working on your fitting…"} />
-                  </div>
-                </div>
-              )}
-            </>
+          <input
+            ref={(node) => {
+              pickers.current.main = node;
+            }}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            disabled={step === "processing"}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void fitFace(file, "front");
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={(node) => {
+              pickers.current.pair = node;
+            }}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            disabled={step === "processing"}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void fitFace(file, "back");
+              e.target.value = "";
+            }}
+          />
+          {shown ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={shown}
+              alt="You in this piece"
+              className="absolute inset-0 h-full w-full object-contain"
+            />
           ) : (
-            <label className="absolute inset-0 flex cursor-pointer items-center justify-center">
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                disabled={step === "processing"}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void onFile(f);
-                }}
-              />
-              {youSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={youSrc} alt="You" className="absolute inset-0 h-full w-full object-contain" />
-              ) : (
-                <span className="absolute inset-0 flex flex-col items-center justify-center px-8 pb-16 text-center">
-                  <span className="font-display text-4xl text-noir">You</span>
-                  <span className="mt-3 text-sm text-stone">
-                    {pairedBack
-                      ? "Back photo added. Tap to fit your front and back together."
-                      : `Tap to add a ${photoOptions.find((o) => o.id === photoChoice)?.label.toLowerCase()} photo`}
-                  </span>
-                </span>
-              )}
-            </label>
+            <button
+              type="button"
+              disabled={step === "processing"}
+              onClick={() => requestPhoto(lookView === "Back" && hasStoreBack ? "pair" : "main")}
+              className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center"
+            >
+              <span className="font-display text-4xl text-noir">You</span>
+              <span className="mt-3 max-w-xs text-sm leading-relaxed text-stone">
+                {lookView === "Back" && hasStoreBack
+                  ? "Add a photo with your back to the camera."
+                  : photoPrompt(product.photoGuide)}
+              </span>
+            </button>
           )}
-          {!frontUrl && !backUrl && !youSrc && faceFor(photoChoice) === "front" && (
-            <label className="absolute inset-x-4 bottom-4 z-10 cursor-pointer bg-white px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-noir">
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                disabled={step === "processing"}
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  setPairedBack(file);
-                  setBackChoice(file && !storeHasGarmentBack(product) ? "ask" : null);
-                  e.target.value = "";
-                }}
-              />
-              {pairedBack ? "Back photo ready" : "Add a back photo with it"}
-            </label>
+          <span className="pointer-events-none absolute left-4 top-4 z-10 bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-noir">
+            You
+          </span>
+          {shown && (
+            <button
+              type="button"
+              disabled={step === "processing"}
+              onClick={() => requestPhoto(lookView === "Back" && hasStoreBack ? "pair" : "main")}
+              className="fsh-btn absolute right-4 top-4 z-10 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-noir disabled:opacity-40"
+            >
+              Different photo
+            </button>
           )}
-          {frontUrl || backUrl ? (
-            <label className="absolute right-4 top-4 z-10 cursor-pointer bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-noir">
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                disabled={step === "processing"}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void onFile(file);
-                  e.target.value = "";
-                }}
-              />
-              Change photo
-            </label>
-          ) : (
-            <span className="pointer-events-none absolute left-4 top-4 z-10 bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-noir">
-              You
-            </span>
-          )}
-          {step === "processing" && !frontUrl && !backUrl && (
-            <div className="fsh-overlay absolute inset-0 z-20 flex items-center justify-center bg-noir/80 px-6 transition-opacity duration-300">
-              <div className="w-full max-w-xs bg-white">
-                <FshLoaderOverlay
-                  compact
-                  title={status || "Working on your fitting…"}
-                  detail={
-                    layerName
-                      ? `Keeping ${product.name} and adding ${layerName}.`
-                      : "Your photo stays here while the clothes are placed."
-                  }
-                />
-              </div>
+          {hasStoreBack && (frontUrl || backUrl) && (
+            <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLookView("Front")}
+                className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                  lookView === "Front" ? "bg-noir text-white" : "bg-white text-noir"
+                }`}
+              >
+                Front
+              </button>
+              <button
+                type="button"
+                onClick={() => setLookView("Back")}
+                className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                  lookView === "Back" ? "bg-noir text-white" : "bg-white text-noir"
+                }`}
+              >
+                Back
+              </button>
             </div>
           )}
         </div>
@@ -613,50 +499,63 @@ export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelP
         </div>
       </div>
 
-      {garmentViewNotice(product) && (
-        <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">{garmentViewNotice(product)}</p>
+      <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
+        {brand} will not use your photo for any commercial purposes.
+      </p>
+
+      {hasStoreBack && frontUrl && !backUrl && (
+        <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
+          This piece has a back as well. Open Back, then add a photo with your back to the camera if you want to see it.
+        </p>
       )}
 
-      {backChoice === "ask" && (pairedBack || pendingBack) && (
-        <div className="mt-4 max-w-xl border border-hairline bg-white p-4">
-          <p className="text-sm leading-relaxed text-noir">
-            This piece has no back photo from the store. Do you want an AI assumption of how the back might look? It will be labeled as an estimate, not a store photo.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="bg-noir px-4 py-2 text-[10px] font-medium text-white"
-              onClick={() => {
-                setBackChoice("yes");
-                if (pendingBack) void onOtherSide(pendingBack, true);
-              }}
+      {mounted &&
+        backChoice === "ask" &&
+        pendingBack &&
+        createPortal(
+          <div className="fsh-modal-overlay fixed inset-0 z-[130] flex items-center justify-center bg-noir/55 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="fsh-modal-panel w-full max-w-md bg-white p-6 sm:p-8"
             >
-              Use an assumption
-            </button>
-            <button
-              type="button"
-              className="border border-noir px-4 py-2 text-[10px] font-medium text-noir"
-              onClick={() => {
-                setBackChoice("no");
-                setPairedBack(null);
-                setPendingBack(null);
-              }}
-            >
-              No, keep the front only
-            </button>
-          </div>
-        </div>
-      )}
+              <p className="catalog-code">Back of {product.name}</p>
+              <h2 className="mt-3 font-display text-3xl text-noir">This piece has no back photo</h2>
+              <p className="mt-4 text-sm leading-relaxed text-noir">
+                Your back photo is ready. An AI assumption of the back can be placed on it. That
+                result is labeled an estimate, not a store photo.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="fsh-btn bg-noir px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
+                  onClick={() => {
+                    const file = pendingBack;
+                    setBackChoice("yes");
+                    if (file) void fitFace(file, "back", true);
+                  }}
+                >
+                  Use an assumption
+                </button>
+                <button
+                  type="button"
+                  className="fsh-btn border border-hairline px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-noir"
+                  onClick={() => {
+                    setBackChoice("no");
+                    setPendingBack(null);
+                  }}
+                >
+                  Keep the front only
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {backIsEstimate && lookView === "Back" && backUrl && (
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone">
           This back is an AI assumption, not a store photo. Details that were not visible on the front cannot be verified.
-        </p>
-      )}
-
-      {step === "processing" && (
-        <p className="mt-4 text-sm text-noir" role="status">
-          {status}
         </p>
       )}
 
@@ -665,24 +564,8 @@ export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelP
       {step === "result" && (
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-xs leading-relaxed text-stone">
-            The preview keeps your whole photo, face included. Preview only — not a fit guarantee.
+            The preview keeps your whole photo. It is a preview, not a fit guarantee.
           </p>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {(!frontUrl || !backUrl) && (
-            <label className="cursor-pointer border border-noir px-3 py-2 text-[10px] font-medium text-noir sm:px-4 sm:text-xs">
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void onOtherSide(file);
-                  e.target.value = "";
-                }}
-              />
-              {frontUrl ? "Add back photo" : "Add front photo"}
-            </label>
-          )}
           {lookGuide && (
             <button
               type="button"
@@ -692,7 +575,6 @@ export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelP
               Suggestions
             </button>
           )}
-          </div>
         </div>
       )}
 
@@ -703,6 +585,29 @@ export function TryOnPanel({ product, storeSlug = "demo", catalog }: TryOnPanelP
           guide={skinGuide}
         />
       )}
+
+      {mounted &&
+        step === "processing" &&
+        createPortal(
+          <div className="fixed inset-0 z-[140] flex items-center justify-center bg-canvas px-6">
+            <FshLoaderOverlay
+              title={status || "Working on your fitting…"}
+                detail={
+                  layerName
+                    ? `Keeping ${product.name} and adding ${layerName}.`
+                    : "Your photo is used just as you sent it."
+                }
+            />
+          </div>,
+          document.body,
+        )}
+
+      <PhotoDisclaimerModal
+        open={photoSlot !== null}
+        brandName={brand}
+        onAccept={acceptPhoto}
+        onClose={() => setPhotoSlot(null)}
+      />
 
       {lookGuide && (
         <SuggestionsModal

@@ -52,6 +52,12 @@ export default function StorefrontLayout({ children }: LayoutProps<"/stores">) {
           <Link href="/dashboard" className="hover:text-noir">
             Add this to your store
           </Link>
+          <Link href="/terms" className="hover:text-noir">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:text-noir">
+            Privacy
+          </Link>
         </div>
       </footer>
     </div>

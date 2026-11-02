@@ -37,3 +37,14 @@ export function getPhotoOptions(guide: PhotoGuide): PhotoOption[] {
 export function defaultPhotoChoice(guide: PhotoGuide): PhotoGuide {
   return guide;
 }
+
+/** One plain instruction, taken from the photo this piece actually needs. */
+export function photoPrompt(guide: PhotoGuide): string {
+  if (guide === "front-half") {
+    return "Add a photo from the waist up, facing the camera.";
+  }
+  if (guide === "back-full") {
+    return "Add a full-length photo with your back to the camera.";
+  }
+  return "Add a full-length photo, facing the camera.";
+}

@@ -2,6 +2,7 @@
 
 import { TryOnPanel } from "@/components/try-on-panel";
 import { productFromPage, catalogFromPage } from "@/lib/data/incoming-product";
+import { brandFromStore } from "@/lib/data/stores";
 import { demoProducts, getProduct, type Product } from "@/lib/data/products";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -80,7 +81,11 @@ export default function WidgetPage() {
         </p>
         <h1 className="mt-1 font-display text-xl text-noir sm:text-2xl">{pageProduct.name}</h1>
       </header>
-      <TryOnPanel product={pageProduct} catalog={pageCatalog} />
+      <TryOnPanel
+        product={pageProduct}
+        catalog={pageCatalog}
+        brandName={brandFromStore(searchParams.get("brand") || searchParams.get("store"))}
+      />
     </div>
   );
 }

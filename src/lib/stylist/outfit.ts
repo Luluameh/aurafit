@@ -66,10 +66,77 @@ function reasonFor(
     : colors.length > 0
       ? `${anchor.name} is ${colors.join(" and ")}. ${item.name} is ${itemColors.join(" and ") || item.colors[0] || "a shop piece"}, so it sits beside that rather than copying it.`
       : `${item.name} is what this shop has to wear with ${anchor.name}.`;
+  if (anchor.tags.includes("ankara")) {
+    return `${item.name} stays plain beside ${anchor.name}, so the print stays the focus of this ${occasion} look.`;
+  }
   const lead = chosenByShopper
     ? `You selected ${item.name} to wear with ${anchor.name}.`
-    : `${item.name} is the match from this shop for ${anchor.name}.`;
-  return `${lead} ${colour} It is $${item.price}, counted toward the ${occasion} outfit.`;
+    : `${item.name} is worn with ${anchor.name} for this ${occasion} look.`;
+  return `${lead} ${colour}`;
+}
+
+export function isCeremonialMenswear(anchor: Product) {
+  return (
+    anchor.tags.includes("mens") &&
+    (anchor.colors.includes("native") || /agbada/i.test(anchor.name))
+  );
+}
+
+/** The occasion this piece is actually for, so suggestions are not a fixed evening list. */
+export function intentionFor(anchor: Product): { occasion: Occasion; line: string } {
+  if (isCeremonialMenswear(anchor)) {
+    return {
+      occasion: "evening",
+      line: `${anchor.name} is already a full ceremonial look. Keep it clear. A plain brown or black shoe you own finishes it. Nothing here should cover the embroidery.`,
+    };
+  }
+  if (anchor.tags.includes("ankara")) {
+    const colour = colorWords(anchor)[0] ?? "print";
+    return {
+      occasion: "evening",
+      line: `${anchor.name} leads. The ${colour} print is the point, so the shoe, bag, and necklace stay plain.`,
+    };
+  }
+  if (anchor.tags.includes("mens")) {
+    return {
+      occasion: anchor.tags.includes("office") ? "office" : "weekend",
+      line: `${anchor.name} is menswear. The pieces below are from the same side of the shop, chosen to sit with it.`,
+    };
+  }
+  if (anchor.tags.includes("office") || anchor.tags.includes("work")) {
+    return {
+      occasion: "office",
+      line: `${anchor.name} reads as day and office. The additions keep that line instead of turning it into evening wear.`,
+    };
+  }
+  if (anchor.tags.includes("casual") || anchor.tags.includes("weekend")) {
+    return {
+      occasion: "weekend",
+      line: `${anchor.name} is an easy piece. The matches stay light: a simple shoe and a bag that does not dress it up past the cloth.`,
+    };
+  }
+  return {
+    occasion: "evening",
+    line: `${anchor.name} is the piece on you. What follows is chosen to sit beside it, not to replace it.`,
+  };
+}
+
+function fitScore(anchor: Product, item: Product, occasion: Occasion) {
+  let value = colorScore(anchor, item) + score(item, occasion);
+  const menswear = anchor.tags.includes("mens");
+  if (menswear !== item.tags.includes("mens")) value -= 30;
+  if (
+    (anchor.tags.includes("ankara") || anchor.tags.includes("evening") || anchor.tags.includes("occasion")) &&
+    item.category === "shoe" &&
+    item.tags.includes("casual")
+  ) {
+    value -= 8;
+  }
+  if (anchor.tags.includes("ankara") && item.category === "outer") value -= 10;
+  if (anchor.tags.includes("ankara") && item.colors.some((color) => ["nude", "black", "gold"].includes(color))) {
+    value += 3;
+  }
+  return value;
 }
 
 function candidates(
@@ -80,11 +147,7 @@ function candidates(
 ) {
   const pool = catalog.filter((item) => item.category === category && !used.has(item.id));
   const menswear = anchor.tags.includes("mens");
-  const wardrobe =
-    category === "top" || category === "bottom" || category === "outer" || category === "dress";
-  if (!wardrobe) return pool;
-  const sided = pool.filter((item) => item.tags.includes("mens") === menswear);
-  return sided.length > 0 ? sided : pool;
+  return pool.filter((item) => item.tags.includes("mens") === menswear);
 }
 
 export function buildCoordinatedOutfit(input: {
@@ -96,6 +159,24 @@ export function buildCoordinatedOutfit(input: {
 }): CoordinatedOutfit {
   const budget = Number.isFinite(input.budget) ? Math.max(0, Math.round(input.budget)) : 0;
   const used = new Set<string>([input.anchor.id]);
+  if (isCeremonialMenswear(input.anchor)) {
+    return {
+      occasion: input.occasion,
+      budget,
+      pieces: [
+        {
+          role: "anchor",
+          label: "Selected",
+          product: input.anchor,
+          reason: intentionFor(input.anchor).line,
+          canTryOn: false,
+          alternatives: [],
+        },
+      ],
+      total: input.anchor.price,
+      note: intentionFor(input.anchor).line,
+    };
+  }
   const skipped: string[] = [];
   const roles: { role: string; label: string; category: Product["category"] }[] = [];
 
@@ -139,10 +220,7 @@ export function buildCoordinatedOutfit(input: {
   for (const slot of roles) {
     const pool = candidates(input.catalog, input.anchor, slot.category, used);
     const ranked = [...pool].sort((a, b) => {
-      const byLook =
-        colorScore(input.anchor, b) +
-        score(b, input.occasion) -
-        (colorScore(input.anchor, a) + score(a, input.occasion));
+      const byLook = fitScore(input.anchor, b, input.occasion) - fitScore(input.anchor, a, input.occasion);
       return byLook !== 0 ? byLook : a.price - b.price;
     });
     const forced = input.swaps?.[slot.role]

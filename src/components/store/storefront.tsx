@@ -1,6 +1,7 @@
 "use client";
 
 import { ProductCard } from "@/components/product-card";
+import { TextTransition } from "@/components/text-transition";
 import { catalogSections } from "@/lib/data/catalog";
 import { demoProducts, type ProductCategory } from "@/lib/data/products";
 import { useEffect, useMemo, useState } from "react";
@@ -74,11 +75,16 @@ export function Storefront({ storeSlug, initialSection }: StorefrontProps) {
             src={HERO_VIDEO}
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-noir/60 via-noir/10 to-noir/15" />
-          <div className="rise absolute inset-x-0 bottom-0 px-4 pb-8 text-white sm:px-6 sm:pb-10">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-white/80 sm:text-[11px] sm:tracking-[0.28em]">
+          <div className="absolute inset-x-0 bottom-0 px-4 pb-8 text-white sm:px-6 sm:pb-10">
+            <p className="fsh-reveal text-[10px] uppercase tracking-[0.22em] text-white/80 sm:text-[11px] sm:tracking-[0.28em]">
               New arrivals
             </p>
-            <h1 className="mt-2 font-display text-3xl leading-none sm:mt-3 sm:text-5xl">The quiet collection</h1>
+            <TextTransition
+              as="h1"
+              text="The quiet collection"
+              delay={0.15}
+              className="mt-2 font-display text-3xl leading-none text-white sm:mt-3 sm:text-5xl"
+            />
             <button
               type="button"
               onClick={() => document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" })}
@@ -97,7 +103,11 @@ export function Storefront({ storeSlug, initialSection }: StorefrontProps) {
 
       <section id="shop" className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 sm:py-14 lg:px-10">
         <div className="mb-6 flex items-end justify-between gap-4 sm:mb-8">
-          <h2 className="font-display text-3xl sm:text-4xl">New arrivals</h2>
+          <TextTransition
+            as="h2"
+            text="New arrivals"
+            className="font-display text-3xl sm:text-4xl"
+          />
           <button
             type="button"
             onClick={() => setActive("all")}

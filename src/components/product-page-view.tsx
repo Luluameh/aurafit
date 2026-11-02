@@ -1,9 +1,11 @@
 "use client";
 
 import { StoreGarmentPhoto } from "@/components/store-garment-photo";
+import { TextTransition } from "@/components/text-transition";
 import { TryOnPanel } from "@/components/try-on-panel";
 import { sectionFor } from "@/lib/data/catalog";
-import { garmentViewNotice } from "@/lib/data/garment-views";
+import { storeHasGarmentBack } from "@/lib/data/garment-views";
+import { photoPrompt } from "@/lib/data/photo-guide";
 import type { Product } from "@/lib/data/products";
 import { productSupportsApparelTryOn } from "@/lib/data/products";
 import Link from "next/link";
@@ -18,8 +20,6 @@ export function ProductPageView({ product, storeSlug }: ProductPageViewProps) {
   const searchParams = useSearchParams();
   const tryMode = searchParams.get("try") === "1";
   const canTry = productSupportsApparelTryOn(product);
-  const viewNotice = garmentViewNotice(product);
-
   if (tryMode && canTry) {
     return (
       <div className="fsh-reveal mx-auto max-w-[1280px] px-3 py-5 sm:px-4 sm:py-6 lg:px-8">
@@ -53,18 +53,24 @@ export function ProductPageView({ product, storeSlug }: ProductPageViewProps) {
           <p className="catalog-code">
             {sectionFor(product.category).code} · {sectionFor(product.category).label}
           </p>
-          <h1 className="mt-2 font-display text-3xl text-noir sm:text-4xl md:text-5xl">{product.name}</h1>
+          <TextTransition
+            as="h1"
+            text={product.name}
+            className="mt-2 font-display text-3xl text-noir sm:text-4xl md:text-5xl"
+          />
           <p className="mt-3 text-xl tabular-nums">${product.price}</p>
           <dl className="mt-8 divide-y divide-hairline border-y border-hairline text-sm">
             <Spec label="Colour" value={product.colors.join(" · ")} />
             <Spec label="Scene" value={product.tags.slice(0, 2).join(" · ")} />
-            <Spec label="Photo" value={sectionFor(product.category).note} />
           </dl>
           {canTry ? (
             <>
-              {viewNotice && (
-                <p className="mt-6 max-w-sm text-sm leading-relaxed text-noir">{viewNotice}</p>
-              )}
+              <p className="mt-6 max-w-sm text-sm leading-relaxed text-noir">
+                {photoPrompt(product.photoGuide)}
+                {storeHasGarmentBack(product)
+                  ? " This piece also has a back, if you want to see that too."
+                  : ""}
+              </p>
               <Link
                 href={`/stores/${storeSlug}/product/${product.id}?try=1`}
                 className="fsh-btn mt-6 flex w-full items-center justify-center bg-noir py-4 text-xs font-semibold uppercase tracking-[0.18em] text-white hover:bg-charcoal sm:w-72"

@@ -1,4 +1,5 @@
 import { FittingRoomStage } from "@/components/fitting-room-stage";
+import { TextTransition } from "@/components/text-transition";
 import { catalogSections } from "@/lib/data/catalog";
 import { demoProducts } from "@/lib/data/products";
 import Image from "next/image";
@@ -29,15 +30,18 @@ export default function HomePage() {
   return (
     <div>
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-        <div className="fsh-reveal">
-          <p className="catalog-code">FSH · fitting room catalog</p>
-        <h1 className="mt-4 max-w-2xl font-display text-4xl leading-[1.02] text-noir sm:text-5xl md:text-6xl">
-          See the clothes on the person buying them.
-        </h1>
-        <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone sm:mt-5 sm:text-base">
-          Store owners drop FSH onto their site. Shoppers upload a photo, preview
-          the piece, then see what from the same catalog can sit beside it.
-        </p>
+        <div>
+          <p className="catalog-code fsh-reveal">FSH · fitting room catalog</p>
+          <TextTransition
+            as="h1"
+            text="See the clothes on the person buying them."
+            delay={0.12}
+            className="mt-4 max-w-2xl font-display text-4xl leading-[1.02] text-noir sm:text-5xl md:text-6xl"
+          />
+          <p className="fsh-reveal mt-4 max-w-xl text-sm leading-relaxed text-stone sm:mt-5 sm:text-base">
+            Store owners drop FSH onto their site. Shoppers upload a photo, preview
+            the piece, then see what from the same catalog can sit beside it.
+          </p>
         </div>
       </div>
 
